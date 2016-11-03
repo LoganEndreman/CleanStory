@@ -1,0 +1,9 @@
+I want to be able to write a interactive story for NaNoWriMo.
+I want to be able to have choose your own story type story telling, but also with moving around a tilemap
+This is inspired in part by "A Dark Room"
+The gameplay I envision, as of now, is moving around a large graphical map, and entering "rooms" which are choose your own adventure type gameplay with optional pictures and sound
+
+objects has a "draw" function, that take 
+
+Map is down with svg
+animate slide for images and map
