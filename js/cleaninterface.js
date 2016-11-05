@@ -1,31 +1,49 @@
 // File for Interface with the HTML
 //
 
+// Global callback
+var cleanChoiceCallback = function(choiceid) {return false;};
+
 // Objects
 function cleanTextArea(div_id) {
 	this.textArea = document.getElementById(div_id);
 }
 
 cleanTextArea.prototype.update = function(game, readtext) {
-	// turn choices into links, and get rid of unavailable choices
 	var front;
 	var back;
-	// parse out any unavailible choices
+	// parse out any unavailible choices, and make links
 	front = readtext.indexOf('{');
 	while (front !== -1) {
 		var choiceid = +(readtext.slice(front+1,readtext.indexOf('}',front+1)));
-		back = readtext.indexOf('{/', front);
-		backback = readtext.indexOf('}', front+2);
 		if (!game.choiceAvailable(choiceid)) {
 			// remove this bit
-			readtext = readtext.slice(0, front) + readtext.slice(backback+1);
+			var rmfront = front;
+			while (rmfront !== -1) {
+				var rmback = readtext.indexOf('{/'+choiceid+'}', rmfront+3);
+				if (rmback === -1) {
+					throw new Error("Malformed text");
+				}
+				var rmbackback = readtext.indexOf('}', rmback+3);
+				readtext = readtext.slice(0, rmfront) + readtext.slice(rmbackback+1);
+				rmfront = readtext.indexOf('{'+choiceid+'}');
+			}
+		} else if (!game.choiceChooseable(choiceid)) {
+			// just remove the tags around it
+			readtext = readtext.replace(new RegExp('\\{'+ choiceid +'\\}', 'g'), '');
+			readtext = readtext.replace(new RegExp('\\{\\/'+ choiceid +'\\}', 'g'), '');
 		} else {
 			// turn this part to a link
-			readtext.replace(new RegExp('\\{'+ choiceid +'\\}', 'g'), '<a onclick="alert(\'click\');">');
-			readtext.replace(new RegExp('\\{\\/'+ choiceid +'\\}', 'g'), '</a>');
+			readtext = readtext.replace(new RegExp('\\{'+ choiceid +'\\}', 'g'), '<a class="choice" id="choice'+ choiceid +'" onclick="cleanChoiceCallback('+ choiceid +');">');
+			readtext = readtext.replace(new RegExp('\\{\\/'+ choiceid +'\\}', 'g'), '</a>');
 		}
+		front = readtext.indexOf('{');
 	}
-	this.textArea.innerHTML += readtext;
+
+	// if you want to do +=, you have to first parse out the links previous
+	// a better way would be to add to some history subdiv or something
+	// TODO
+	this.textArea.innerHTML = readtext;
 };
 
 function cleanMapArea(div_id) {
@@ -39,6 +57,11 @@ function cleanImageArea(div_id) {
 function cleanInterface(gameobj, textdivid) {
 	this.game = gameobj
 	this.textArea = new cleanTextArea(textdivid);
+	var that = this
+	cleanChoiceCallback = function(choiceid) {
+		that.makeChoice(choiceid);
+		return false;
+	};
 }
 
 cleanInterface.prototype.update = function() {
@@ -46,9 +69,15 @@ cleanInterface.prototype.update = function() {
 	if (!this.game.inRoom) {
 	}
 	// Add the current text
-	this.textArea.update(game, game.read());
+	this.textArea.update(this.game, this.game.read());
+};
+
+cleanInterface.prototype.makeChoice = function(choiceid) {
+	this.game.makeChoice(choiceid);
+	this.update();	
 };
 
 // Run the story
 cleanInterface.prototype.runGame = function() {
+	this.update();
 };

@@ -2,19 +2,24 @@
 <html>
 	<head>
 		<title>The Illuminated</title>
-		<style>
-			html, body {
-				width:  90%;
-				height: 90%;
-				margin: 0px;
-				background-color: #eeeeee;
-			}
-		</style>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" crossorigin="anonymous">
+		<link rel="stylesheet" type="text/css" href="styles/cleanstyle.css">
 		<script src="js/cleanstory.js"></script>
 		<script src="js/cleaninterface.js"></script>
 	</head>
 	<body>
-		<div id="gametext"></div>
+		<div class="container-fluid">
+			<div class="row">
+				<center>
+					<h3>The Illuminated</h3>
+				</center>
+			</div>
+			<div class="row">
+				<div class="panel panel-default col-md-8 col-md-offset-2">
+					<div class="panel-body" id="gametext"></div>
+				</div>
+			</div>
+		</div>
 		<script src="js/theilluminated.js"></script>
 	</body>
 </html>
