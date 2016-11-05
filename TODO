@@ -7,3 +7,7 @@ objects has a "draw" function, that take
 
 Map is down with svg
 animate slide for images and map
+
+I want to write the story like this:
+   make room
+   add branch

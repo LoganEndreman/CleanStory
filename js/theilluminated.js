@@ -1,3 +1,11 @@
 // Example of a Implemented Game
 
-game = new cleanGame();
+var illgame = new cleanGame();
+
+
+
+// set up the implementation
+var illim = new cleanInterface(illgame, "gametext");
+
+// run it
+var illim.runGame();
