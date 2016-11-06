@@ -3,9 +3,11 @@ I want to be able to have choose your own story type story telling, but also wit
 This is inspired in part by "A Dark Room"
 The gameplay I envision, as of now, is moving around a large graphical map, and entering "rooms" which are choose your own adventure type gameplay with optional pictures and sound
 
-objects has a "draw" function, that take 
-
 Map is down with svg
 animate slide for images and map
 
 Better markdown for text?
+
+Rooms have an onleave event, and a onenter event
+
+Map state works like this: If you are standing where a room is, you half enter it (still can leave via map, still see the map) An event must have the player enter the room for it to take away the map, and player movement via map. 

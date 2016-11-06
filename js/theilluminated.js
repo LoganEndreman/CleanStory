@@ -6,6 +6,7 @@ ig.addIcon("tmpimg/empty.png",0);
 ig.addIcon("tmpimg/plus.png",1);
 ig.addIcon("tmpimg/tree.png",2);
 ig.addIcon("tmpimg/x.png",3);
+ig.setPlayerIcon("tmpimg/player.png");
 
 ig.addMap("main",
 	[
@@ -19,7 +20,7 @@ ig.addMap("main",
 	[2,2,0,0,2,0,0,0,2],
 	[2,2,2,2,2,2,2,2,2]
 	]
-	 );
+	 , [0,1,3]);
 
 ig.addRoom("The Office", {x:2, y:2, map:"main"});
 ig.setStartRoom("The Office");

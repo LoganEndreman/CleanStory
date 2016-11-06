@@ -6,6 +6,7 @@
 // Player object
 // holds player inventory
 function cleanPlayer() {
+	this.iconPath = undefined;
 	this.position = undefined;
 	this.inventory = [];
 }
@@ -56,9 +57,6 @@ function cleanPosition(x, y, mapname) {
 }
 
 function cleanTile(iconpath) {
-	this.description = undefined;
-	this.position = undefined;
-	this.seen = undefined;
 	this.iconPath = iconpath;
 	this.soundId = undefined;
 	this.movable = false;
@@ -71,11 +69,18 @@ function cleanMap(name) {
 	this.tiles = [[]];
 }
 
-cleanMap.prototype.loadMap = function(array2dpaths) {
-	for (var y=0; y<array2dpaths.length; y++) {
+cleanMap.prototype.loadMap = function(arrayids, movable, icons) {
+	for (var y=0; y<arrayids.length; y++) {
 		this.tiles[y] = [];
-		for (var x=0; x<array2dpaths[0].length; x++) {
-			var newtile = new cleanTile(array2dpaths[y][x]);
+		for (var x=0; x<arrayids[0].length; x++) {
+			if (icons[arrayids[y][x]] === undefined) {
+				throw new Error("Unknown icon id");
+			}
+			var iconpath = icons[arrayids[y][x]];
+			var newtile = new cleanTile(iconpath);
+			if (movable.indexOf(arrayids[y][x]) !== -1) {
+				newtile.movable = true;
+			}
 			this.tiles[y][x] = newtile;
 		}
 	}
@@ -95,7 +100,6 @@ function cleanItem(name, visible) {
 	this.max = 1;
 	this.count = 1;
 	this.description = undefined;
-	this.imageId = undefined;
 	this.expireTimer = undefined;
 	this.value = ""; // a string value that can be set to user input
 }
@@ -103,10 +107,16 @@ function cleanItem(name, visible) {
 function cleanEffect() {
 	this.gotItems = []; // list of items player gets when choice is choosen
 	this.removeItemNames = []; // list of item names that get removed when choice is choosen
+	this.playerLeaveRoom = false;
+	this.playerEnterRoom = false;
 	this.playerNewPosition = undefined; // new position for player
+	this.playerNewIconPath = undefined;
 	this.roomName = undefined; // room to change
+	this.activate = false;
+	this.deactivated = false;
 	this.roomNewBranchName = undefined; // branch for room
 	this.roomNewPosition = undefined; // new position for room // TODO, dont forget to add a game method for this
+	this.roomNewIconPath = undefined;
 }
 
 cleanEffect.prototype.addToChoices = function(ids, branch) {
@@ -127,12 +137,26 @@ cleanEffect.prototype.happen = function(game) {
 	game.player.removeItems(this.removeItemNames);
 	// add items
 	game.player.addItems(this.gotItems);
+	// leave or enter room
+	if (this.playerLeaveRoom === true) {
+		game.player.position = game.rooms[game.currentRoomName].position;
+		game.currentRoomName = undefined;
+	}
+	if (this.playerEnterRoom === true) {
+		game.currentRoomName = game.overRoomName;
+	}	
 	// move player
 	if (this.playerNewPosition !== undefined) {
 		game.player.position = this.playerNewPosition;
-		game.currentRoomName = undefined;
+		game.updateOverRoom();
 	}	
 	if (this.roomName !== undefined) {
+		if (this.activate) {
+			game.rooms[this.roomName].active = true;
+		}
+		if (this.deactivate) {
+			game.rooms[this.roomName].active = false;
+		}
 		// change room branch
 		if (this.roomNewBranchName !== undefined) {
 			game.rooms[this.roomName].currentBranchName = this.roomNewBranchName;
@@ -140,6 +164,7 @@ cleanEffect.prototype.happen = function(game) {
 		// change room position
 		if (this.roomNewPosition !== undefined) {
 			game.rooms[this.roomName].position = this.roomNewPosition;
+			game.updateOverRoom();
 		}
 	}
 };
@@ -203,10 +228,12 @@ cleanBranch.prototype.getChoice = function(choiceid) {
 // holds text interaction
 function cleanRoom(name) {
 	this.name = name;
-	this.description = ""; // The description on the map
+	this.iconPath = undefined;
 	this.position = undefined;
 	this.currentBranchName = undefined;
-	this.iconId = undefined;
+	this.active = true;
+	this.effectsOnOver = [];
+	this.effectsOnOut = [];
 }
 
 cleanRoom.prototype.setStartBranch = function(startbranch) {
@@ -219,26 +246,38 @@ function cleanGame() {
 	this.turn = 0;
 	this.icons = []; // array by id
 	this.sounds = []; // array by id
-	this.maps = {}; // object by name
-	this.rooms = {}; // object by name
-	this.branches = {}; // object by name
-	this.currentRoomName = undefined;
+	this.maps = new Map(); // map by name
+	this.rooms = new Map(); // map by name
+	this.branches = new Map(); // map by name
+	this.currentRoomName = undefined; // room entered, no map shown
+	this.overRoomName = undefined; // room over in map
 	this.player = new cleanPlayer();
 }
 
+cleanGame.prototype
+
 cleanGame.prototype.getBranch = function() {
-	var bname = this.rooms[this.currentRoomName].currentBranchName;
-	if (this.branches[bname] === undefined) {
-		throw new Error("Undefined Branch");
+	// get current room branch, if there, otherwise overroom branch
+	var bname = undefined;
+	if (this.currentRoomName !== undefined) {
+		bname = this.rooms[this.currentRoomName].currentBranchName;
+	} else if (this.overRoomName !== undefined) {
+		bname = this.rooms[this.overRoomName].currentBranchName;
+	} else {
+		throw new Error("Tried to get a branch, when in map mode");
 	}
 	return this.branches[bname];
 };
 
 cleanGame.prototype.read = function() {
-	// TODO read sends map stuff in map mode
 	var br = this.getBranch();
 	return br.read();
 };
+
+cleanGame.prototype.updateOverRoom = function() {
+	// see if there is an active room where the player is
+	// TODO
+}
 
 cleanGame.prototype.choiceAvailable = function(choiceid) {
 	var br = this.getBranch();
@@ -258,23 +297,17 @@ cleanGame.prototype.makeChoice = function(choiceid) {
 
 cleanGame.prototype.addIcon = function(path, id) {
 	this.icons[id] = path;
+};
+
+cleanGame.prototype.setPlayerIcon = function(path) {
+	this.player.iconPath = path;
 }
 
-cleanGame.prototype.addMap = function(name, arrayids) {
-	var arraypaths = [];
-	for (var y=0; y<arrayids.length; y++) {
-		arraypaths[y] = [];
-		for (var x=0; x<arrayids.length; x++) {
-			if (this.icons[arrayids[y][x]] === undefined) {
-				throw new Error("Unknown icon id");
-			}
-			arraypaths[y][x] = this.icons[arrayids[y][x]];
-		}
-	}
+cleanGame.prototype.addMap = function(name, arrayids, movable) {
 	var newmap = new cleanMap(name);
-	newmap.loadMap(arraypaths);
+	newmap.loadMap(arrayids, movable, this.icons);
 	this.maps[name] = newmap;
-}
+};
 
 cleanGame.prototype.addRoom = function(name, pos) {
 	if (this.rooms[name] !== undefined) {
@@ -368,11 +401,20 @@ cleanGame.prototype.addEffectBranch = function(branch, choiceids, room, tobranch
 	e.addToChoices(choiceids, this.branches[branch]);
 };
 
-cleanGame.prototype.addEffectLeaveRoom = function(branch, choiceids, room) {
+cleanGame.prototype.addEffectLeaveRoom = function(branch, choiceids) {
 	if (this.branches[branch] === undefined) {
 		throw new Error("Undefined Branch");
 	}
 	var e = new cleanEffect();
-	e.playerNewPosition = this.rooms[room].position;
+	e.playerLeaveRoom = true;
+	e.addToChoices(choiceids, this.branches[branch]);
+};
+
+cleanGame.prototype.addEffectEnterRoom = function(branch, choiceids) {
+	if (this.branches[branch] === undefined) {
+		throw new Error("Undefined Branch");
+	}
+	var e = new cleanEffect();
+	e.playerEnterRoom = true;
 	e.addToChoices(choiceids, this.branches[branch]);
 };
