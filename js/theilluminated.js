@@ -2,7 +2,26 @@
 
 var ig = new cleanGame();
 
-ig.addRoom("The Office");
+ig.addIcon("tmpimg/empty.png",0);
+ig.addIcon("tmpimg/plus.png",1);
+ig.addIcon("tmpimg/tree.png",2);
+ig.addIcon("tmpimg/x.png",3);
+
+ig.addMap("main",
+	[
+	[2,2,2,2,2,2,2,2,2],
+	[2,2,0,0,0,2,2,0,2],
+	[2,0,3,0,2,2,0,0,2],
+	[2,0,2,2,2,0,0,2,2],
+	[2,0,0,0,0,0,2,2,2],
+	[2,2,2,0,2,2,2,2,2],
+	[2,1,0,0,0,0,2,0,2],
+	[2,2,0,0,2,0,0,0,2],
+	[2,2,2,2,2,2,2,2,2]
+	]
+	 );
+
+ig.addRoom("The Office", {x:2, y:2, map:"main"});
 ig.setStartRoom("The Office");
 
 ig.addBranch("Intro",
@@ -37,12 +56,13 @@ ig.addChoice("But Wait", 0, true);
 ig.addEffectBranch("But Wait", 0, "The Office", "Intro");
 
 ig.addBranch("Finish",
-		"You eat the pancakes, and win.\n"+
-		"Nice!\n"
-	    );
+`You eat the pancakes, and win.<br>
+Nice!{0}<p>Go to map</p>{/0}`);
+ig.addChoice("Finish", 0, true);
+ig.addEffectLeaveRoom("Finish", 0, "The Office");
 
 // set up the implementation
-var illim = new cleanInterface(ig, "gametext");
+var illim = new cleanInterface(ig, "gametext", "gamemap");
 
 // run it
 illim.runGame();

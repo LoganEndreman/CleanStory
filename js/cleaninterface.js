@@ -47,16 +47,17 @@ cleanTextArea.prototype.update = function(game, readtext) {
 };
 
 function cleanMapArea(div_id) {
-
+	this.mapArea = document.getElementById(div_id);
 }
 
-function cleanImageArea(div_id) {
-
+cleanMapArea.prototype.update = function(game) {
+	game;	
 }
 
-function cleanInterface(gameobj, textdivid) {
+function cleanInterface(gameobj, textdivid, mapdivid) {
 	this.game = gameobj
 	this.textArea = new cleanTextArea(textdivid);
+	this.mapArea = new cleanMapArea(mapdivid);
 	var that = this
 	cleanChoiceCallback = function(choiceid) {
 		that.makeChoice(choiceid);
@@ -64,12 +65,24 @@ function cleanInterface(gameobj, textdivid) {
 	};
 }
 
+cleanInterface.prototype.expandMap = function() {
+
+}
+
+cleanInterface.prototype.contractMap = function() {
+
+}
+
 cleanInterface.prototype.update = function() {
 	// get state
-	if (!this.game.inRoom) {
+	if (this.game.currentRoomName === undefined) {
+		this.expandMap();
+		this.mapArea.update(this.game);
+	} else {
+		this.contractMap();
+		// Add the current text
+		this.textArea.update(this.game, this.game.read());
 	}
-	// Add the current text
-	this.textArea.update(this.game, this.game.read());
 };
 
 cleanInterface.prototype.makeChoice = function(choiceid) {
