@@ -5,6 +5,7 @@
 		<!-- Dependancies -->
 		<script src="//cdnjs.cloudflare.com/ajax/libs/velocity/1.2.3/velocity.min.js"></script>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" crossorigin="anonymous">
+		<!-- cleanStory library -->
 		<link rel="stylesheet" type="text/css" href="styles/cleanstyle.css">
 		<script src="js/cleanstory.js"></script>
 		<script src="js/cleaninterface.js"></script>
@@ -13,22 +14,40 @@
 		<div class="container-fluid">
 			<div class="row">
 				<center>
-					<h3>The Illuminated</h3>
+					<h4>The Illuminated</h4>
 				</center>
 			</div>
 			<div class="row">
 				<div class="panel panel-default col-md-8 col-md-offset-2">
-					<div class="panel-body">
+					<div class="panel-body" id="gamemap-container">
 						<svg xmlns="http://www.w3.org/2000/svg" id="gamemap" width="100%" height="100%"></svg>
 					</div>
 				</div>
 			</div>
 			<div class="row">
 				<div class="panel panel-default col-md-8 col-md-offset-2">
-					<div class="panel-body" id="gametext"></div>
+					<div class="panel-body" id="gametext-container">
+						<div id="gametext"></div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="panel panel-default col-md-8 col-md-offset-2">
+					<div class="panel-body" id="gamecontrols-container">
+						<div class="row" id="gamecontrols">
+							<center>
+							<a class="col-md-3 choice" id="gamecontrols-inventory"> Inventory </a>
+							<a class="col-md-3 choice" id="gamecontrols-save"> Save </a>
+							<a class="col-md-3 choice" id="gamecontrols-load"> Load </a>
+							<a class="col-md-3 choice" id="gamecontrols-mute"> Mute </a>
+							</center>
+						</div>
+					</div>
+					<div class="panel-footer" id="gamecontrols-output"></div>
 				</div>
 			</div>
 		</div>
+		<!-- The game code -->
 		<script src="js/theilluminated.js"></script>
 	</body>
 </html>

@@ -67,8 +67,39 @@ ig.addBranch("Done Here",
 `You ate pancakes here.<br>
 Nice!`);
 
+ig.addRoom("Shop", {x:1, y:6, map:"main"});
+ig.addBranch("Shop Welcome",
+`Welcome to my shop!<br>
+{0}Have a look around!{/0}`);
+ig.addChoice("Shop Welcome", 0, true);
+ig.addEffectBranch("Shop Welcome", 0, "Shop", "Buy Something");
+ig.addEffectEnterRoom("Shop Welcome", 0);
+ig.setRoomBranch("Shop", "Shop Welcome");
+ig.addBranch("Buy Something",
+`{3}What do you want to buy?<br>
+{0}Syrup<br>{/0}
+{1}Pancake Mix<br>{/1}
+{2}Butter<br>{/2}{/3}
+{4}You bought everything!<br>
+{5}Thank you, come again.{/5}{/4}`);
+ig.addChoice("Buy Something", 3, false);
+ig.addChoice("Buy Something", 4, false);
+ig.addChoiceRequired("Buy Something", 4, ["syrup", "pancake mix", "butter"]);
+ig.addChoiceForbidden("Buy Something", 3, ["syrup", "pancake mix", "butter"]);
+ig.addChoice("Buy Something", 0, true);
+ig.addEffectItem("Buy Something", 0, "syrup", true);
+ig.addChoiceForbidden("Buy Something", 0, "syrup");
+ig.addChoice("Buy Something", 1, true);
+ig.addEffectItem("Buy Something", 1, "pancake mix", true);
+ig.addChoiceForbidden("Buy Something", 1, "pancake mix");
+ig.addChoice("Buy Something", 2, true);
+ig.addEffectItem("Buy Something", 2, "butter", true);
+ig.addChoiceForbidden("Buy Something", 2, "butter");
+ig.addChoice("Buy Something", 5, true);
+ig.addEffectLeaveRoom("Buy Something", 5);
+
 // set up the implementation
-var illim = new cleanInterface(ig, "gametext", "gamemap");
+var illim = new cleanInterface(ig);
 
 // run it
 illim.runGame();

@@ -144,7 +144,7 @@ cleanEffect.prototype.happen = function(game) {
 	// add items
 	game.player.addItems(this.gotItems);
 	// leave or enter room
-	if (this.playerLeaveRoom === true) {
+	if (this.playerLeaveRoom === true && game.currentRoomName !== undefined) {
 		game.player.position.copy(game.rooms.get(game.currentRoomName).position);
 		game.currentRoomName = undefined;
 		game.updateOverRoom();
@@ -179,22 +179,42 @@ cleanEffect.prototype.happen = function(game) {
 // A choice in a branch, if choosen activates a branch and/or changes a players or room position
 function cleanChoice() {
 	// condition
-	this.requiredItemNames = []; // list of item names
-	this.forbiddenItemNames = []; // list of item names
+	this.requiredItemNames = []; // list of lists of item names, if any groups pass, it passes
+	this.forbiddenItemNames = []; // list of lists of item names, if any groups pass, it fails
 	// activation
 	this.effects = [];
 }
 
 cleanChoice.prototype.available = function(player) {
-	var passed = true;
+	var passed = false;
+	if (this.requiredItemNames.length === 0) {
+		passed = true;
+	}
 	for (var r=0; r<this.requiredItemNames.length; r++) {
-		if (!player.hasItem(this.requiredItemNames[r])) {
-			passed = false;
+		var grouphas = true;
+		for (sr=0; sr<this.requiredItemNames[r].length; sr++) {
+			if (!player.hasItem(this.requiredItemNames[r][sr])) {
+				grouphas = false;
+				break;
+			}
+		}
+		if (grouphas) {
+			passed = true;
 			break;
 		}
 	}
+	if (!passed) {
+		return passed;
+	}
 	for (var f=0; f<this.forbiddenItemNames.length; f++) {
-		if (player.hasItem(this.forbiddenItemNames[f])) {
+		var grouphas = true;
+		for (sf=0; sf<this.forbiddenItemNames[f].length; sf++) {
+			if (!player.hasItem(this.forbiddenItemNames[f][sf])) {
+				grouphas = false;
+				break;
+			}
+		}
+		if (grouphas) {
 			passed = false;
 			break;
 		}
@@ -289,7 +309,6 @@ cleanGame.prototype.updateOverRoom = function() {
 	this.overRoomName = undefined;
 	var that = this;
 	this.rooms.forEach(function(room) {
-		console.log(room);
 		if (room.position !== undefined && room.active == true && room.position.mapName == that.player.position.mapName && room.position.x == that.player.position.x && room.position.y == that.player.position.y) {
 			that.overRoomName = room.name;
 		}
@@ -372,7 +391,10 @@ cleanGame.prototype.addChoiceRequired = function(branch, id, required) {
 		throw new Error("Undefined Choice");
 	}
 	var c = this.branches.get(branch).choices[id];
-	c.requiredItemNames = c.requiredItemNames.concat(required);
+	if (!Array.isArray(required)) {
+		required = [required];
+	}
+	c.requiredItemNames.push(required);
 };
 
 cleanGame.prototype.addChoiceForbidden = function(branch, id, forbidden) {
@@ -383,7 +405,10 @@ cleanGame.prototype.addChoiceForbidden = function(branch, id, forbidden) {
 		throw new Error("Undefined Choice");
 	}
 	var c = this.branches.get(branch).choices[id];
-	c.forbiddenItemNames = c.forbiddenItemNames.concat(forbidden);
+	if (!Array.isArray(forbidden)) {
+		forbidden = [forbidden];
+	}
+	c.forbiddenItemNames.push(forbidden);
 };
 
 cleanGame.prototype.addEffectItem = function(branch, choiceids, itemname, itemvisible) {

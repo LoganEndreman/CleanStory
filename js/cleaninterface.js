@@ -140,10 +140,12 @@ cleanMapArea.prototype.update = function(game) {
 	
 };
 
-function cleanInterface(gameobj, textdivid, mapdivid) {
+function cleanInterface(gameobj) {
 	this.game = gameobj
-	this.textArea = new cleanTextArea(textdivid);
-	this.mapArea = new cleanMapArea(mapdivid);
+	this.textArea = new cleanTextArea("gametext");
+	this.texthid = false;
+	this.mapArea = new cleanMapArea("gamemap");
+	this.maphid = false;
 	this.animating = false;
 
 	var that = this
@@ -155,7 +157,108 @@ function cleanInterface(gameobj, textdivid, mapdivid) {
 		that.move(x,y);
 		return false;
 	}
+	document.addEventListener('keydown', function(evt) {
+		var ret = false;
+		var x = that.game.player.position.x;
+		var y = that.game.player.position.y;
+
+		if (evt.keyCode == 37) {
+			that.move(x-1, y);
+			ret = true;
+		} else if (evt.keyCode == 39) {
+			that.move(x+1, y);
+			ret = true;
+		} else if (evt.keyCode == 38) {
+			that.move(x,y-1);
+			ret = true;
+		} else if (evt.keyCode == 40) {
+			that.move(x,y+1);
+			ret = true;
+		}
+
+		return ret;
+	});
+
+	this.cmdArea = document.getElementById("gamecontrols-output");
+
+	this.invArea = document.getElementById("gamecontrols-inventory");
+	this.showinv = false;
+	Velocity(this.cmdArea, 'slideUp',{duration:1});
+	this.invArea.addEventListener('click', function(evt) {
+		if (that.showinv) {
+			that.invArea.innerText = "Inventory";
+			Velocity(that.cmdArea, 'slideUp',{});
+			that.showinv = false;
+		} else {
+			that.invArea.innerText = "Hide Inventory";
+			Velocity(that.cmdArea, 'slideDown',{});
+			that.showinv = true;
+		}
+	});
+	this.saveArea = document.getElementById("gamecontrols-save");
+	this.saveArea.addEventListener('click', function(evt) {
+		Velocity(that.saveArea, {opacity:0.0},{complete:function() {
+			that.saveArea.innerText = "Game Saved";
+		}});
+		Velocity(that.saveArea, {opacity:1.0},{duration:1000});
+		that.saveGame(function() {
+			Velocity(that.saveArea, {opacity:0.0},{delay:500, complete:function() {
+				that.saveArea.innerText = "Save";
+			}});
+			Velocity(that.saveArea, {opacity:1.0},{});
+		});
+	});
+	this.loadArea = document.getElementById("gamecontrols-load");
+	this.loadArea.addEventListener('click', function(evt) {
+		Velocity(that.loadArea, {opacity:0.0},{complete:function() {
+			that.loadArea.innerText = "Game Loaded";
+		}});
+		Velocity(that.loadArea, {opacity:1.0},{duration:1000});
+		that.loadGame(function() {
+			Velocity(that.loadArea, {opacity:0.0},{delay:500, complete:function() {
+				that.loadArea.innerText = "Load";
+			}});
+			Velocity(that.loadArea, {opacity:1.0},{});
+		});
+	});
+	this.muteArea = document.getElementById("gamecontrols-mute");
+	this.muted = false;
+	this.muteArea.addEventListener('click', function(evt) {
+		if (that.muted) {
+			that.muted = false;
+			that.muteArea.innerText = "Mute";
+		} else {
+			that.muted = true;
+			that.muteArea.innerText = "Unmute";
+		}
+	});
 }
+
+
+cleanInterface.prototype.saveGame = function(callback) {
+	callback();
+}
+
+cleanInterface.prototype.loadGame = function(callback) {
+	callback();
+}
+
+cleanInterface.prototype.updateInventory = function() {
+	this.cmdArea.innerHTML = "Inventory : ";
+	for (var i=0; i<this.game.player.inventory.length; i++) {
+		if (this.game.player.inventory[i].visible) {
+			var itemstr = "";
+			if (this.game.player.inventory[i].count > 1) {
+				itemstr += ""+ this.game.player.inventory[i].count+" x ";
+			}
+			itemstr += this.game.player.inventory[i].name;
+			if (i < this.game.player.inventory.length - 1) {
+				itemstr += ", ";
+			}
+			this.cmdArea.innerHTML += itemstr;
+		}
+	}
+};
 
 cleanInterface.prototype.pathfind = function(sx,sy) {
 	var x = this.game.player.position.x;
@@ -239,7 +342,9 @@ cleanInterface.prototype.move = function(x,y) {
 		// get path
 		var path = this.pathfind(x,y);
 		var that = this;
-		this.animating = true;
+		if (path.length > 0) {	
+			this.animating = true;
+		}
 		for (var i=path.length - 1; i>=0; i--) {
 			var newx = path[i].x;
 			var newy = path[i].y;
@@ -258,28 +363,68 @@ cleanInterface.prototype.move = function(x,y) {
 };
 
 cleanInterface.prototype.expandAllMap = function() {
-
+	var that = this;
+	if (this.maphid) {
+		var third = window.innerHeight * 0.6;
+		Velocity(document.getElementById("gamemap"), {height:third},{duration: 200, complete: function () {
+			that.mapArea.update(that.game);
+		}});
+		Velocity(document.getElementById("gamemap"), {opacity:1.0},{});
+		this.maphid = false;
+	}
+	if (!this.texthid) {
+		Velocity(document.getElementById("gametext"), 'slideUp',{});
+		this.texthid = true;
+	}
 };
 
 cleanInterface.prototype.expandHalfHalf = function() {
-
+	var that = this;
+	if (this.maphid) {
+		var third = window.innerHeight * 0.6;
+		Velocity(document.getElementById("gamemap"), {height:third},{duration: 200, complete: function () {
+			that.mapArea.update(that.game);
+		}});
+		Velocity(document.getElementById("gamemap"), {opacity:1.0},{duration: 200});
+		this.maphid = false;
+	}
+	if (this.texthid) {
+		Velocity(document.getElementById("gametext"), 'slideDown',{});
+		this.texthid = false;
+	} else {
+		Velocity(document.getElementById("gametext"), 'fadeIn',{});
+	}
 };
 
 cleanInterface.prototype.expandAllText = function() {
-
+	var that = this;
+	if (!this.maphid) {
+		Velocity(document.getElementById("gamemap"), {height:1},{complete: function () {
+			that.mapArea.update(that.game);
+		}});
+		Velocity(document.getElementById("gamemap"), {opacity:0.0},{duration: 100});
+		this.maphid = true;
+	}
+	if (this.texthid) {
+		Velocity(document.getElementById("gametext"), 'slideDown',{});
+		this.texthid = false;
+	} else {
+		Velocity(document.getElementById("gametext"), 'fadeIn',{});
+	}
 };
 
 cleanInterface.prototype.update = function() {
-	// get state
+	this.updateInventory();
 	if (this.game.currentRoomName !== undefined) {
-		// Just text
+		this.textArea.update(this.game, this.game.read());
+		this.expandAllText();
 	} else if (this.game.overRoomName !== undefined) {
-		// half half
+		this.textArea.update(this.game, this.game.read());
+		this.expandHalfHalf();
 	} else {
-		// Just Map
+		this.expandAllMap();
 	}
-	this.textArea.update(this.game, this.game.read());
-	this.mapArea.update(this.game);
+	//this.mapArea.update(this.game);
 };
 
 cleanInterface.prototype.makeChoice = function(choiceid) {
