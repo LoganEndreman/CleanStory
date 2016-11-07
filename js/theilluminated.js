@@ -60,7 +60,12 @@ ig.addBranch("Finish",
 `You eat the pancakes, and win.<br>
 Nice!{0}<p>Go to map</p>{/0}`);
 ig.addChoice("Finish", 0, true);
-ig.addEffectLeaveRoom("Finish", 0, "The Office");
+ig.addEffectLeaveRoom("Finish", 0);
+ig.addEffectBranch("Finish", 0, "The Office", "Done Here");
+
+ig.addBranch("Done Here",
+`You ate pancakes here.<br>
+Nice!`);
 
 // set up the implementation
 var illim = new cleanInterface(ig, "gametext", "gamemap");

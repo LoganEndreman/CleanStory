@@ -7,7 +7,7 @@
 // holds player inventory
 function cleanPlayer() {
 	this.iconPath = undefined;
-	this.position = undefined;
+	this.position = new cleanPosition(0,0,undefined);
 	this.inventory = [];
 }
 
@@ -55,6 +55,12 @@ function cleanPosition(x, y, mapname) {
 	this.y = y;
 	this.mapName = mapname;
 }
+
+cleanPosition.prototype.copy = function(other) {
+	this.x = other.x;
+	this.y = other.y;
+	this.mapName = other.mapName;
+};
 
 function cleanTile(iconpath) {
 	this.iconPath = iconpath;
@@ -139,8 +145,9 @@ cleanEffect.prototype.happen = function(game) {
 	game.player.addItems(this.gotItems);
 	// leave or enter room
 	if (this.playerLeaveRoom === true) {
-		game.player.position = game.rooms[game.currentRoomName].position;
+		game.player.position.copy(game.rooms.get(game.currentRoomName).position);
 		game.currentRoomName = undefined;
+		game.updateOverRoom();
 	}
 	if (this.playerEnterRoom === true) {
 		game.currentRoomName = game.overRoomName;
@@ -152,18 +159,18 @@ cleanEffect.prototype.happen = function(game) {
 	}	
 	if (this.roomName !== undefined) {
 		if (this.activate) {
-			game.rooms[this.roomName].active = true;
+			game.rooms.get(this.roomName).active = true;
 		}
 		if (this.deactivate) {
-			game.rooms[this.roomName].active = false;
+			game.rooms.get(this.roomName).active = false;
 		}
 		// change room branch
 		if (this.roomNewBranchName !== undefined) {
-			game.rooms[this.roomName].currentBranchName = this.roomNewBranchName;
+			game.rooms.get(this.roomName).currentBranchName = this.roomNewBranchName;
 		}
 		// change room position
 		if (this.roomNewPosition !== undefined) {
-			game.rooms[this.roomName].position = this.roomNewPosition;
+			game.rooms.get(this.roomName).position = this.roomNewPosition;
 			game.updateOverRoom();
 		}
 	}
@@ -260,23 +267,33 @@ cleanGame.prototype.getBranch = function() {
 	// get current room branch, if there, otherwise overroom branch
 	var bname = undefined;
 	if (this.currentRoomName !== undefined) {
-		bname = this.rooms[this.currentRoomName].currentBranchName;
+		bname = this.rooms.get(this.currentRoomName).currentBranchName;
 	} else if (this.overRoomName !== undefined) {
-		bname = this.rooms[this.overRoomName].currentBranchName;
+		bname = this.rooms.get(this.overRoomName).currentBranchName;
 	} else {
-		throw new Error("Tried to get a branch, when in map mode");
+		return undefined;
 	}
-	return this.branches[bname];
+	return this.branches.get(bname);
 };
 
 cleanGame.prototype.read = function() {
 	var br = this.getBranch();
+	if (br == undefined) {
+		return "";
+	}
 	return br.read();
 };
 
 cleanGame.prototype.updateOverRoom = function() {
 	// see if there is an active room where the player is
-	// TODO
+	this.overRoomName = undefined;
+	var that = this;
+	this.rooms.forEach(function(room) {
+		console.log(room);
+		if (room.position !== undefined && room.active == true && room.position.mapName == that.player.position.mapName && room.position.x == that.player.position.x && room.position.y == that.player.position.y) {
+			that.overRoomName = room.name;
+		}
+	});
 }
 
 cleanGame.prototype.choiceAvailable = function(choiceid) {
@@ -310,111 +327,111 @@ cleanGame.prototype.addMap = function(name, arrayids, movable) {
 };
 
 cleanGame.prototype.addRoom = function(name, pos) {
-	if (this.rooms[name] !== undefined) {
+	if (this.rooms.get(name) !== undefined) {
 		throw new Error("Room name taken");
 	}
 	var newroom = new cleanRoom(name);
 	newroom.position = new cleanPosition(pos.x, pos.y, pos.map);
-	this.rooms[name] = newroom;
+	this.rooms.set(name, newroom);
 };
 
 cleanGame.prototype.addBranch = function(name, text) {
-	if (this.branches[name] !== undefined) {
+	if (this.branches.get(name) !== undefined) {
 		throw new Error("Branch name taken");
 	}
 	var newbranch = new cleanBranch(name, text);
-	this.branches[name] = newbranch;
+	this.branches.set(name, newbranch);
 };
 
 cleanGame.prototype.setRoomBranch = function(roomname, branchname) {
-	if (this.rooms[roomname] === undefined || this.branches[branchname] === undefined) {
+	if (this.rooms.get(roomname) === undefined || this.branches.get(branchname) === undefined) {
 		throw new Error("Undefined Branch or Room");
 	}
-	this.rooms[roomname].currentBranchName = branchname;
+	this.rooms.get(roomname).currentBranchName = branchname;
 };
 
 cleanGame.prototype.setStartRoom = function(roomname) {
-	if (this.rooms[roomname] === undefined) {
+	if (this.rooms.get(roomname) === undefined) {
 		throw new Error("Undefined Room");
 	}
 	this.currentRoomName = roomname;
 };
 
 cleanGame.prototype.addChoice = function(branch, id, choosable) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
-	this.branches[branch].choices[id] = new cleanChoice();
+	this.branches.get(branch).choices[id] = new cleanChoice();
 };
 
 cleanGame.prototype.addChoiceRequired = function(branch, id, required) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
-	if (this.branches[branch].choices[id] === undefined) {
+	if (this.branches.get(branch).choices[id] === undefined) {
 		throw new Error("Undefined Choice");
 	}
-	var c = this.branches[branch].choices[id];
+	var c = this.branches.get(branch).choices[id];
 	c.requiredItemNames = c.requiredItemNames.concat(required);
 };
 
 cleanGame.prototype.addChoiceForbidden = function(branch, id, forbidden) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
-	if (this.branches[branch].choices[id] === undefined) {
+	if (this.branches.get(branch).choices[id] === undefined) {
 		throw new Error("Undefined Choice");
 	}
-	var c = this.branches[branch].choices[id];
+	var c = this.branches.get(branch).choices[id];
 	c.forbiddenItemNames = c.forbiddenItemNames.concat(forbidden);
 };
 
 cleanGame.prototype.addEffectItem = function(branch, choiceids, itemname, itemvisible) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
 	var e = new cleanEffect();
 	var newitem = new cleanItem(itemname, Boolean(itemvisible));
 	e.gotItems.push(newitem);
-	e.addToChoices(choiceids, this.branches[branch]);
+	e.addToChoices(choiceids, this.branches.get(branch));
 };
 
 cleanGame.prototype.addEffectRemoveItem = function(branch, choiceids, remove) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
 	var e = new cleanEffect();
 	e.removeItemNames = e.removeItemNames.concat(remove);
-	e.addToChoices(choiceids, this.branches[branch]);
+	e.addToChoices(choiceids, this.branches.get(branch));
 };
 
 cleanGame.prototype.addEffectBranch = function(branch, choiceids, room, tobranch) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
-	if (this.rooms[room] === undefined) {
+	if (this.rooms.get(room) === undefined) {
 		throw new Error("Undefined Room");
 	}
 	var e = new cleanEffect();
 	e.roomName = room;
 	e.roomNewBranchName = tobranch;
-	e.addToChoices(choiceids, this.branches[branch]);
+	e.addToChoices(choiceids, this.branches.get(branch));
 };
 
 cleanGame.prototype.addEffectLeaveRoom = function(branch, choiceids) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
 	var e = new cleanEffect();
 	e.playerLeaveRoom = true;
-	e.addToChoices(choiceids, this.branches[branch]);
+	e.addToChoices(choiceids, this.branches.get(branch));
 };
 
 cleanGame.prototype.addEffectEnterRoom = function(branch, choiceids) {
-	if (this.branches[branch] === undefined) {
+	if (this.branches.get(branch) === undefined) {
 		throw new Error("Undefined Branch");
 	}
 	var e = new cleanEffect();
 	e.playerEnterRoom = true;
-	e.addToChoices(choiceids, this.branches[branch]);
+	e.addToChoices(choiceids, this.branches.get(branch));
 };

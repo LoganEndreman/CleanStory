@@ -50,6 +50,11 @@ cleanTextArea.prototype.update = function(game, readtext) {
 function cleanMapArea(div_id) {
 	this.mapArea = document.getElementById(div_id);
 	this.ns = "http://www.w3.org/2000/svg";
+
+	// cached for animating reasons
+	this.xpad = 0;
+	this.ypad = 0;
+	this.boxsize = 0;
 };
 
 cleanMapArea.prototype.clear = function() {
@@ -58,8 +63,18 @@ cleanMapArea.prototype.clear = function() {
 	}
 };
 
+cleanMapArea.prototype.coord2px = function(x,y) {
+	var ret = {};
+	ret.x = this.xpad + (this.boxsize * x);
+	ret.y = this.ypad + (this.boxsize * y);
+	return ret;
+};
+
 cleanMapArea.prototype.update = function(game) {
 	this.clear();
+	if (game.currentRoomName !== undefined) {
+		return;
+	}
 	if (game.player.position === undefined) {
 		throw new Error("Tried to draw map with no player position set");
 	}
@@ -68,29 +83,29 @@ cleanMapArea.prototype.update = function(game) {
 	var map = game.maps[game.player.position.mapName];
 	var ylen = map.tiles.length;
 	var xlen = map.tiles[0].length;
-	var xpad = 0;
-	var ypad = 0;
-	var boxsize = 0;
+	this.xpad = 0;
+	this.ypad = 0;
+	this.boxsize = 0;
 
 	// Draw map
 	if (rec.width / xlen > rec.height / ylen) {
 		// pad x
-		boxsize = rec.height / ylen;
-		xpad = (rec.width - (xlen * boxsize)) / 2;
+		this.boxsize = rec.height / ylen;
+		this.xpad = (rec.width - (xlen * this.boxsize)) / 2;
 	} else {
 		// pad y
-		boxsize = rec.width / xlen;
-		ypad = (rec.height - (ylen * boxsize)) / 2;
+		this.boxsize = rec.width / xlen;
+		this.ypad = (rec.height - (ylen * this.boxsize)) / 2;
 	}
 
 	for (var y=0; y<ylen; y++) {
 		for (var x=0; x<xlen; x++) {
 			var tile = document.createElementNS(this.ns, 'image');
 			tile.setAttribute('href', map.tiles[y][x].iconPath);
-			tile.setAttribute('x', xpad + (boxsize * x));
-			tile.setAttribute('y', ypad + (boxsize * y));
-			tile.setAttribute('width', boxsize);
-			tile.setAttribute('height', boxsize);
+			tile.setAttribute('x', this.xpad + (this.boxsize * x));
+			tile.setAttribute('y', this.ypad + (this.boxsize * y));
+			tile.setAttribute('width', this.boxsize);
+			tile.setAttribute('height', this.boxsize);
 			if (map.tiles[y][x].movable) {
 				tile.setAttribute('onclick', 'cleanMoveCallback('+ x +','+ y +');');
 			}
@@ -103,10 +118,10 @@ cleanMapArea.prototype.update = function(game) {
 		if (room.active && room.iconPath !== undefined && room.position != undefined && room.position.mapName == map.name) {
 			var tile = document.createElementNS(this.ns, 'image');
 			tile.setAttribute('href', room.iconPath);
-			tile.setAttribute('x', xpad + (boxsize * room.position.x));
-			tile.setAttribute('y', ypad + (boxsize * room.position.y));
-			tile.setAttribute('width', boxsize);
-			tile.setAttribute('height', boxsize);
+			tile.setAttribute('x', this.xpad + (this.boxsize * room.position.x));
+			tile.setAttribute('y', this.ypad + (this.boxsize * room.position.y));
+			tile.setAttribute('width', this.boxsize);
+			tile.setAttribute('height', this.boxsize);
 			this.mapArea.appendChild(tile);
 		}
 	});
@@ -115,10 +130,11 @@ cleanMapArea.prototype.update = function(game) {
 	if (game.player.iconPath !== undefined) {
 			var tile = document.createElementNS(this.ns, 'image');
 			tile.setAttribute('href', game.player.iconPath);
-			tile.setAttribute('x', xpad + (boxsize * game.player.position.x));
-			tile.setAttribute('y', ypad + (boxsize * game.player.position.y));
-			tile.setAttribute('width', boxsize);
-			tile.setAttribute('height', boxsize);
+			tile.setAttribute('x', this.xpad + (this.boxsize * game.player.position.x));
+			tile.setAttribute('y', this.ypad + (this.boxsize * game.player.position.y));
+			tile.setAttribute('width', this.boxsize);
+			tile.setAttribute('height', this.boxsize);
+			tile.setAttribute('id','playericon');
 			this.mapArea.appendChild(tile);
 	}
 	
@@ -128,6 +144,7 @@ function cleanInterface(gameobj, textdivid, mapdivid) {
 	this.game = gameobj
 	this.textArea = new cleanTextArea(textdivid);
 	this.mapArea = new cleanMapArea(mapdivid);
+	this.animating = false;
 
 	var that = this
 	cleanChoiceCallback = function(choiceid) {
@@ -174,7 +191,7 @@ cleanInterface.prototype.pathfind = function(sx,sy) {
 					if (mx < 0 || mx > map[0].length || my < 0 || my > map.length) {
 						continue;
 					}
-					// check movable
+				// check movable
 					if (!map[my][mx].movable) {
 						continue;
 					}
@@ -212,15 +229,31 @@ cleanInterface.prototype.pathfind = function(sx,sy) {
 };
 
 cleanInterface.prototype.move = function(x,y) {
-	if (this.game.currentRoomName) {
+	if (this.game.currentRoomName !== undefined) {
 		return;
 	} else {
-		// finish any existing animation step, cancel the rest
-		//TODO
+		// if we are animating, return
+		if (this.animating) {
+			return;
+		}
 		// get path
 		var path = this.pathfind(x,y);
-		// queue each step for animation
-		//TODO
+		var that = this;
+		this.animating = true;
+		for (var i=path.length - 1; i>=0; i--) {
+			var newx = path[i].x;
+			var newy = path[i].y;
+			var newpx = this.mapArea.coord2px(path[i].x, path[i].y);
+			Velocity(document.getElementById("playericon"),{x:newpx.x, y:newpx.y}, {duration: 100,
+				complete: (i==0)?function() {
+					that.game.player.position.x = newx;
+					that.game.player.position.y = newy;
+					that.animating = false;
+					that.game.updateOverRoom();
+					that.update();
+				} : undefined
+			});
+		}
 	}
 };
 
@@ -240,15 +273,13 @@ cleanInterface.prototype.update = function() {
 	// get state
 	if (this.game.currentRoomName !== undefined) {
 		// Just text
-		this.textArea.update(this.game, this.game.read());
 	} else if (this.game.overRoomName !== undefined) {
 		// half half
-		this.textArea.update(this.game, this.game.read());
-		this.mapArea.update(this.game);
 	} else {
 		// Just Map
-		this.mapArea.update(this.game);
 	}
+	this.textArea.update(this.game, this.game.read());
+	this.mapArea.update(this.game);
 };
 
 cleanInterface.prototype.makeChoice = function(choiceid) {
