@@ -10,7 +10,7 @@ function cleanTextArea(div_id) {
 	this.textArea = document.getElementById(div_id);
 }
 
-cleanTextArea.prototype.update = function(game, readtext) {
+cleanTextArea.prototype.update = function(game, readtext, dofade) {
 	var front;
 	var back;
 	// parse out any unavailible choices, and make links
@@ -44,7 +44,15 @@ cleanTextArea.prototype.update = function(game, readtext) {
 	// if you want to do +=, you have to first parse out the links previous
 	// a better way would be to add to some history subdiv or something
 	// TODO
-	this.textArea.innerHTML = readtext;
+	if (dofade) {
+		var that = this;
+		Velocity(that.textArea, {opacity:0.0},{duration:100, complete:function() {
+			that.textArea.innerHTML = readtext;
+		}});
+		Velocity(that.textArea, {opacity:1.0},{});
+	} else {
+		this.textArea.innerHTML = readtext;
+	}
 };
 
 function cleanMapArea(div_id) {
@@ -59,7 +67,7 @@ function cleanMapArea(div_id) {
 
 cleanMapArea.prototype.clear = function() {
 	while (this.mapArea.firstChild) {
-		    this.mapArea.removeChild(this.mapArea.firstChild);
+		this.mapArea.removeChild(this.mapArea.firstChild);
 	}
 };
 
@@ -164,18 +172,16 @@ function cleanInterface(gameobj) {
 
 		if (evt.keyCode == 37) {
 			that.move(x-1, y);
-			ret = true;
 		} else if (evt.keyCode == 39) {
 			that.move(x+1, y);
-			ret = true;
 		} else if (evt.keyCode == 38) {
 			that.move(x,y-1);
-			ret = true;
 		} else if (evt.keyCode == 40) {
 			that.move(x,y+1);
+		} else {
 			ret = true;
 		}
-
+		evt.returnValue = ret;
 		return ret;
 	});
 
@@ -186,11 +192,11 @@ function cleanInterface(gameobj) {
 	Velocity(this.cmdArea, 'slideUp',{duration:1});
 	this.invArea.addEventListener('click', function(evt) {
 		if (that.showinv) {
-			that.invArea.innerText = "Inventory";
+			that.fadeSwitchText(that.invArea, "Inventory");
 			Velocity(that.cmdArea, 'slideUp',{});
 			that.showinv = false;
 		} else {
-			that.invArea.innerText = "Hide Inventory";
+			that.fadeSwitchText(that.invArea, "Hide Inventory");
 			Velocity(that.cmdArea, 'slideDown',{});
 			that.showinv = true;
 		}
@@ -226,14 +232,20 @@ function cleanInterface(gameobj) {
 	this.muteArea.addEventListener('click', function(evt) {
 		if (that.muted) {
 			that.muted = false;
-			that.muteArea.innerText = "Mute";
+			that.fadeSwitchText(that.muteArea, "Mute");
 		} else {
 			that.muted = true;
-			that.muteArea.innerText = "Unmute";
+			that.fadeSwitchText(that.muteArea, "Unmute");
 		}
 	});
 }
 
+cleanInterface.prototype.fadeSwitchText = function(node, newtext) {
+	Velocity(node, {opacity:0.0},{duration:100, complete:function() {
+		node.innerText = newtext;
+	}});
+	Velocity(node, {opacity:1.0},{});
+}
 
 cleanInterface.prototype.saveGame = function(callback) {
 	callback();
@@ -389,10 +401,8 @@ cleanInterface.prototype.expandHalfHalf = function() {
 		this.maphid = false;
 	}
 	if (this.texthid) {
-		Velocity(document.getElementById("gametext"), 'slideDown',{});
+		Velocity(document.getElementById("gametext"), 'slideDown',{duration: 100});
 		this.texthid = false;
-	} else {
-		Velocity(document.getElementById("gametext"), 'fadeIn',{});
 	}
 };
 
@@ -408,23 +418,20 @@ cleanInterface.prototype.expandAllText = function() {
 	if (this.texthid) {
 		Velocity(document.getElementById("gametext"), 'slideDown',{});
 		this.texthid = false;
-	} else {
-		Velocity(document.getElementById("gametext"), 'fadeIn',{});
 	}
 };
 
 cleanInterface.prototype.update = function() {
 	this.updateInventory();
 	if (this.game.currentRoomName !== undefined) {
-		this.textArea.update(this.game, this.game.read());
+		this.textArea.update(this.game, this.game.read(), !this.texthid);
 		this.expandAllText();
 	} else if (this.game.overRoomName !== undefined) {
-		this.textArea.update(this.game, this.game.read());
+		this.textArea.update(this.game, this.game.read(), !this.texthid);
 		this.expandHalfHalf();
 	} else {
 		this.expandAllMap();
 	}
-	//this.mapArea.update(this.game);
 };
 
 cleanInterface.prototype.makeChoice = function(choiceid) {
