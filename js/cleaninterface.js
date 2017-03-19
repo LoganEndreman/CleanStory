@@ -1,5 +1,16 @@
 // File for Interface with the HTML
-//
+
+// helper tool functions
+if (typeof(String.prototype.trim) === "undefined") {
+	String.prototype.trim = function() {
+		return String(this).replace(/^\s+|\s+$/g, '');
+	};
+}
+if (typeof(String.prototype.escapeRegExp) === "undefined") {
+	String.prototype.escapeRegExp = function() {
+		return String(this).replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+	}
+}
 
 // Global callback
 var cleanChoiceCallback = function(choiceid) {return false;};
@@ -16,27 +27,45 @@ cleanTextArea.prototype.update = function(game, readtext, dofade) {
 	// parse out any unavailible choices, and make links
 	front = readtext.indexOf('{');
 	while (front !== -1) {
-		var choiceid = +(readtext.slice(front+1,readtext.indexOf('}',front+1)));
-		if (!game.choiceAvailable(choiceid)) {
+		var available = false;
+		var choosable = false;
+
+		var tag = readtext.slice(front+1,readtext.indexOf('}',front+1)).trim();
+		var front_tag = new RegExp('\\{\\s*'+ tag.escapeRegExp() +'\\s*\\}', 'g');
+		var back_tag = new RegExp('\\{\\s*\\/\\s*'+ tag.escapeRegExp() +'\\s*\\}', 'g');
+
+		// first check if this is a '#' statement 
+		if (tag.startsWith('#')) {
+			// set up expected variables
+			var B = game.getCurrentBranchCounter();
+			console.log("B = " + B);
+			// eval the contents, expecting a boolean return
+			available = eval(tag.slice(1));
+		} else {
+			var choiceid = +(tag);
+			available = game.choiceAvailable(choiceid);
+			if (available) {
+				choosable = game.choiceChooseable(choiceid);
+			}
+		}
+
+		if (!available) {
 			// remove this bit
 			var rmfront = front;
-			while (rmfront !== -1) {
-				var rmback = readtext.indexOf('{/'+choiceid+'}', rmfront+3);
-				if (rmback === -1) {
-					throw new Error("Malformed text");
-				}
-				var rmbackback = readtext.indexOf('}', rmback+3);
-				readtext = readtext.slice(0, rmfront) + readtext.slice(rmbackback+1);
-				rmfront = readtext.indexOf('{'+choiceid+'}');
+			var rmback = readtext.search(back_tag);
+			if (rmback === -1) {
+				throw new Error("Malformed text");
 			}
-		} else if (!game.choiceChooseable(choiceid)) {
+			var rmbackback = readtext.indexOf('}', rmback);
+			readtext = readtext.slice(0, rmfront) + readtext.slice(rmbackback+1);
+		} else if (!choosable) {
 			// just remove the tags around it
-			readtext = readtext.replace(new RegExp('\\{'+ choiceid +'\\}', 'g'), '');
-			readtext = readtext.replace(new RegExp('\\{\\/'+ choiceid +'\\}', 'g'), '');
+			readtext = readtext.replace(front_tag, '');
+			readtext = readtext.replace(back_tag, '');
 		} else {
 			// turn this part to a link
-			readtext = readtext.replace(new RegExp('\\{'+ choiceid +'\\}', 'g'), '<a class="choice" id="choice'+ choiceid +'" onclick="cleanChoiceCallback('+ choiceid +');">');
-			readtext = readtext.replace(new RegExp('\\{\\/'+ choiceid +'\\}', 'g'), '</a>');
+			readtext = readtext.replace(front_tag, '<a class="choice" id="choice'+ tag +'" onclick="cleanChoiceCallback('+ tag.trim() +');">');
+			readtext = readtext.replace(back_tag, '</a>');
 		}
 		front = readtext.indexOf('{');
 	}

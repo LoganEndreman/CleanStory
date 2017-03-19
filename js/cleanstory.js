@@ -64,7 +64,6 @@ cleanPosition.prototype.copy = function(other) {
 
 function cleanTile(iconpath) {
 	this.iconPath = iconpath;
-	this.soundId = undefined;
 	this.movable = false;
 }
 
@@ -92,12 +91,6 @@ cleanMap.prototype.loadMap = function(arrayids, movable, icons) {
 	}
 };
 
-function cleanTimer() {
-	this.on = false;
-	this.startTurn = 0;
-	this.duration = 0;
-}
-
 function cleanItem(name, visible) {
 	this.name = name;
 	// visible items show up in the inventory, others are used only as story boolean conditions between rooms
@@ -123,6 +116,7 @@ function cleanEffect() {
 	this.roomNewBranchName = undefined; // branch for room
 	this.roomNewPosition = undefined; // new position for room // TODO, dont forget to add a game method for this
 	this.roomNewIconPath = undefined;
+	// TODO add sound fade
 }
 
 cleanEffect.prototype.addToChoices = function(ids, branch) {
@@ -167,6 +161,8 @@ cleanEffect.prototype.happen = function(game) {
 		// change room branch
 		if (this.roomNewBranchName !== undefined) {
 			game.rooms.get(this.roomName).currentBranchName = this.roomNewBranchName;
+			// add to the branch counter
+			game.branches.get(this.roomNewBranchName).counter++;
 		}
 		// change room position
 		if (this.roomNewPosition !== undefined) {
@@ -236,8 +232,7 @@ function cleanBranch(name, text) {
 	this.name = name;
 	this.text = text; // html string, with {0}clickable links{/0} matching choices
 	this.choices = []; // array by choice id
-	// if you want an image, just embbed an image tag in your text
-	this.soundId = undefined;
+	this.counter = 0; // number of times in this branch
 }
 
 cleanBranch.prototype.read = function() {
@@ -259,8 +254,6 @@ function cleanRoom(name) {
 	this.position = undefined;
 	this.currentBranchName = undefined;
 	this.active = true;
-	this.effectsOnOver = [];
-	this.effectsOnOut = [];
 }
 
 cleanRoom.prototype.setStartBranch = function(startbranch) {
@@ -280,8 +273,6 @@ function cleanGame() {
 	this.overRoomName = undefined; // room over in map
 	this.player = new cleanPlayer();
 }
-
-cleanGame.prototype
 
 cleanGame.prototype.getBranch = function() {
 	// get current room branch, if there, otherwise overroom branch
@@ -311,6 +302,8 @@ cleanGame.prototype.updateOverRoom = function() {
 	this.rooms.forEach(function(room) {
 		if (room.position !== undefined && room.active == true && room.position.mapName == that.player.position.mapName && room.position.x == that.player.position.x && room.position.y == that.player.position.y) {
 			that.overRoomName = room.name;
+			// also add to the branch counter
+			that.branches.get(that.rooms.get(room.name).currentBranchName).counter++;
 		}
 	});
 }
@@ -330,6 +323,11 @@ cleanGame.prototype.makeChoice = function(choiceid) {
 	choice = br.getChoice(choiceid);
 	choice.makeChoice(this);
 };
+
+cleanGame.prototype.getCurrentBranchCounter = function() {
+	var br = this.getBranch();
+	return br.counter;
+}
 
 cleanGame.prototype.addIcon = function(path, id) {
 	this.icons[id] = path;

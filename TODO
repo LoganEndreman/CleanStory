@@ -1,12 +1,10 @@
-I want to be able to write a interactive story for NaNoWriMo.
-I want to be able to have choose your own story type story telling, but also with moving around a tilemap
-This is inspired in part by "A Dark Room"
-The gameplay I envision, as of now, is moving around a large graphical map, and entering "rooms" which are choose your own adventure type gameplay with optional pictures and sound
 
-Better markdown for text?
+The goal is to have a good interactive story telling system. Like a choosable adventure book, but this system also allows for tilemaps movement.
 
-Rooms have an onleave event, and a onenter event
+To add:
+-My story I want to tell
+-Sound with tracks
+	-fade in/out of songs with events
+-AND and OR for event triggers
+-javascript function callback on event, for advanced control
 
-Controls to view inventory, save, load, mute music
-
-What if we require one out of a ton? Or forbid a whole group?

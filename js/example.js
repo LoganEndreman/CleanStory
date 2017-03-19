@@ -65,7 +65,7 @@ ig.addEffectBranch("Finish", 0, "The Office", "Done Here");
 
 ig.addBranch("Done Here",
 `You ate pancakes here.<br>
-Nice!`);
+{#!(B > 4)}Nice!{/#!(B > 4)}{#B > 4}Get over it.{/#B > 4}`);
 
 ig.addRoom("Shop", {x:1, y:6, map:"main"});
 ig.addBranch("Shop Welcome",
